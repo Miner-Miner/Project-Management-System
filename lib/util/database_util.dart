@@ -104,6 +104,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
         description TEXT,
         cost REAL NOT NULL,
         date TEXT NOT NULL,
@@ -536,8 +537,10 @@ class DatabaseHelper {
     int id, {
     String? projectName,
     String? description,
+    String? status,
     String? startDate,
     String? endDate,
+    int? hq,
     double? estimatedCost,
   }) {
     try {
@@ -551,6 +554,10 @@ class DatabaseHelper {
         fields.add('description = ?');
         values.add(description);
       }
+      if (status != null) {
+        fields.add('status = ?');
+        values.add(status);
+      }
       if (startDate != null) {
         fields.add('start_date = ?');
         values.add(startDate);
@@ -558,6 +565,10 @@ class DatabaseHelper {
       if (endDate != null) {
         fields.add('end_date = ?');
         values.add(endDate);
+      }
+      if (hq != null) {
+        fields.add('hq_id = ?');
+        values.add(hq);
       }
       if (estimatedCost != null) {
         fields.add('estimated_cost = ?');

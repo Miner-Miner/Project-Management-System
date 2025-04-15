@@ -290,14 +290,18 @@ class _ProjectListPageState extends State<ProjectListPage> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.remove_red_eye_outlined, color: Colors.blue),
-                      onPressed: () async {
-                        final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddProjectPage()));
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => ViewProjectPage(project['id'])));
                       },
                     ),
                     IconButton(
                       icon: Icon(Icons.edit, color: Colors.blue),
                       onPressed: () async {
-                        final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddProjectPage()));
+                        final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditProjectPage(project['id'])));
+                        if (result == 'refresh') {
+                          setState(() {
+                          });
+                        }
                       },
                     ),
                     IconButton(
@@ -323,3 +327,331 @@ class _ProjectListPageState extends State<ProjectListPage> {
     );
   }
 }
+
+class ViewProjectPage extends StatefulWidget {
+  final int id;
+  ViewProjectPage(this.id);
+
+  @override
+  _ViewProjectPageState createState() => _ViewProjectPageState(id);
+}
+
+class _ViewProjectPageState extends State<ViewProjectPage> {
+  final int id;
+  _ViewProjectPageState(this.id);
+
+  late List<Map<String,dynamic>> hq;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Map<String,dynamic> data =  DatabaseHelper().getRecordById('project',id)!;
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Add Project')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Text(
+                data['project_name'],
+              ),
+              SizedBox(height: 16),
+
+              Text(
+                data['description']
+              ),
+              SizedBox(height: 16),
+
+              Text(
+                data['status']
+              ),
+              SizedBox(height: 16),
+              
+              // Start Date picker
+              Text(
+                data['start_date']
+              ),
+              SizedBox(height: 16),
+
+              // End Date picker
+              Text(
+                data['end_date']
+              ),
+              SizedBox(height: 16),
+
+              Text(
+                DatabaseHelper().getRecordByIdAndGetColumn("hq", data['hq_id'],"location").toString(),
+              ),
+              SizedBox(height: 16),
+              
+              Text(
+                data['estimated_cost'].toString()
+              ),
+              SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EditProjectPage extends StatefulWidget {
+  final int id;
+  EditProjectPage(this.id);
+  
+  @override
+  _EditProjectPageState createState() => _EditProjectPageState(id);
+}
+
+class _EditProjectPageState extends State<EditProjectPage> {
+  final int id;
+  _EditProjectPageState(this.id);
+
+  final _projectNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _estimateCostController = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String? _selectedHQ;
+  String? _status;
+  late Map<String,dynamic> data;
+
+  late List<Map<String,dynamic>> hq;
+
+  @override
+  void initState() {
+    super.initState();
+    hq = DatabaseHelper().getAllHQ();
+    data =  DatabaseHelper().getRecordById('project',id)!;
+    _projectNameController.text = data['project_name'];
+    _descriptionController.text = data['description'];
+    _estimateCostController.text = data['estimated_cost'].toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // This method is wrong set in init
+    // _projectNameController.text = data['project_name'];
+    // _descriptionController.text = data['description'];
+    // _estimateCostController.text = data['estimated_cost'].toString();
+
+    List<String> _hq = [];
+    List<int> _hqID = [];
+    for (int i=0; i<hq.length; i++){
+      Map<String,dynamic> _temp = hq[i];
+      _hq.add(_temp['location']);
+      _hqID.add(_temp['id']);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Add Project')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: _projectNameController,
+                decoration: InputDecoration(
+                  labelText: 'Project Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _descriptionController,
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Status',
+                  border: OutlineInputBorder(),
+                ),
+                value: _status,
+                items: ["Initiate","Pending","Ongoing","Completed"].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    _status = newValue;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              
+              // Start Date picker
+              TextField(
+                readOnly: true,
+                decoration: InputDecoration(
+                  //labelText: 'Start Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                  hintText: _startDate == null
+                      ? data['start_date']
+                      : '${_startDate!.toLocal()}'.split(' ')[0],
+                ),
+                onTap: () async {
+                  final DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: _startDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      _startDate = pickedDate;
+                    });
+                  }
+                },
+              ),
+              SizedBox(height: 16),
+
+              // End Date picker
+              TextField(
+                readOnly: true,
+                decoration: InputDecoration(
+                  //labelText: 'End Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                  hintText: _endDate == null
+                      ? data['end_date']
+                      : '${_endDate!.toLocal()}'.split(' ')[0],
+                ),
+                onTap: () async {
+                  final DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: _endDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      _endDate = pickedDate;
+                    });
+                  }
+                },
+              ),
+              SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'HQ',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedHQ,
+                items: _hq.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedHQ = newValue;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              
+              TextField(
+                controller: _estimateCostController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Estimate Cost',
+                  border: OutlineInputBorder(),
+                  errorText: _validateInput() ? 'Invalid number' : null,
+                ),
+                maxLines: 1,
+              ),
+              SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_projectNameController.text.isEmpty ||
+                        _descriptionController.text.isEmpty ||
+                        _status == null ||
+                        _startDate == null ||
+                        _endDate == null ||
+                        _selectedHQ == null ||
+                        _estimateCostController.text.isEmpty ||
+                        _validateInput()) {
+                      // Show alert if any field is invalid
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Missing or Invalid Fields'),
+                          content: Text('Please fill in all fields correctly before saving.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // Save to database
+                      DatabaseHelper().updateProject(
+                        data['id'],
+                        projectName: _projectNameController.text,
+                        description: _descriptionController.text,
+                        status: _status,
+                        startDate: _startDate!.toLocal().toString().split(' ')[0],
+                        endDate: _endDate!.toLocal().toString().split(' ')[0],
+                        hq: _hqID[_hq.indexOf("$_selectedHQ")],
+                        estimatedCost: double.tryParse(_estimateCostController.text),
+                      );
+                      Navigator.pop(context, 'refresh');
+                    }
+                    print('Project Name: ${_projectNameController.text}');
+                    print('Description: ${_descriptionController.text}');
+                    print('Start Date: ${'${_startDate!.toLocal()}'.split(' ')[0] }');
+                    print('End Date: ${'${_endDate!.toLocal()}'.split(' ')[0] }');
+                    print('HQ: $_selectedHQ');
+                    print('Estimate cost: $_estimateCostController');
+                  },
+                  child: Text('Save Project'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _projectNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  bool _validateInput() {
+  final text = _estimateCostController.text.trim();
+  if (text.isEmpty) return false;
+  return double.tryParse(text) == null;
+}
+}
+
