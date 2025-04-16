@@ -30,14 +30,18 @@ class _AddHQPageState extends State<AddHQPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (location.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Please enter an HQ location')),
                       );
                     } else {
                       DatabaseHelper().insertHQ(location.text.trim());
-                      AddAnother(context, "HQ", [location]);
+                      bool confirm = await AddAnother(context, "HQ", [location]);
+                      if (confirm == true) {
+                        // do nothing
+                      }
+                      else Navigator.pop(context,'refresh');
                     }
                   },
                   child: Text('Save HQ Location'),
@@ -104,17 +108,49 @@ class _HQListPageState extends State<HQListPage> {
                     ),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        // This is high level function implementation.
-                        ShowDialog(context, hq['location'], [hq['location']], () => DatabaseHelper().deleteHQ(hq['id']));
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Delete Confirmation'),
+                            content: Text('Do you really want to delete ${hq['location']}?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text('No'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text('Yes'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true) {
+                          await DatabaseHelper().deleteHQ(hq['id']);
+                          setState(() {});
+                        }
                       },
                     ),
+
                   ],
                 )),
               ]);
             }).toList(),
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async{
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddHQPage()));
+          if (result == 'refresh'){
+            setState(() {
+              // update UI
+            });
+          }
+        },
+        child: Icon(Icons.add),
       ),
     );
   }
@@ -143,8 +179,9 @@ class _EditHQPageState extends State<EditHQPage> {
     else { Navigator.pop(context, 'refresh'); }
     return Scaffold(
       appBar: AppBar(title: Text('Add HQ')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SizedBox(
+        width: MediaQuery.sizeOf(context).width,
+        height: MediaQuery.sizeOf(context).height,
         child: SingleChildScrollView(
           child: Column(
             children: [

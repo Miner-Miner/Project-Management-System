@@ -306,9 +306,30 @@ class _ProjectListPageState extends State<ProjectListPage> {
                     ),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        // This is high level function implementation.
-                        ShowDialog(context, project['project_name'], [project['project_name'],project['status']], () => DatabaseHelper().deleteProject(project['id']));
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Delete Confirmation'),
+                            content: Text('Do you really want to delete ${project['project_name']}?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text('No'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text('Yes'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true) {
+                          await DatabaseHelper().deleteHQ(project['id']);
+
+                          setState(() {});
+                        }
                       },
                     ),
                   ],

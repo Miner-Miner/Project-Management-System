@@ -1,42 +1,7 @@
 import 'package:flutter/material.dart';
 
-String ShowDialog(BuildContext context, String title, List<String> body, bool Function() function) {
-  String returnString = '';
-  String _body = '';
-
-  for (int i=0; i<body.length; i++){
-    _body += "\"${body[i]}\"\n";
-  }
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Do you want to delete $title?"),
-      content: Text("Are you sure?\nDelete $_body"),
-      actions: [
-        TextButton(
-          onPressed: (){
-            Navigator.of(context).pop();
-            function();
-            returnString = 'y';
-          }, 
-          child: Text("Yes")),
-        TextButton(
-          onPressed: (){
-            Navigator.of(context).pop();
-            returnString = 'n';
-          }, 
-          child: Text("No")),
-      ],
-    ),
-  );
-  return returnString;
-}
-
-
-bool AddAnother(BuildContext context, String title, List<dynamic> views){
-  bool _isConfirm = false;
-  showDialog(
+Future<bool> AddAnother(BuildContext context, String title, List<dynamic> views) async{
+  bool ret = await showDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: Text('Add HQ'),
@@ -50,19 +15,17 @@ bool AddAnother(BuildContext context, String title, List<dynamic> views){
                 view.clear();
               }
             }
-            _isConfirm = true;
-            Navigator.pop(context);
+            Navigator.pop(context,true);
           },
         ),
         TextButton(
           child: Text('No'),
           onPressed: () {
-            Navigator.pop(context);
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pop(context,false);
           },
         ),
       ],
     ),
   );
-  return _isConfirm;
+  return ret;
 }

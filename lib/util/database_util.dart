@@ -294,6 +294,43 @@ class DatabaseHelper {
     }
   }
 
+  List<Map<String, dynamic>> getEmployeeCountByDepartment() {
+    try {
+      final result = _db.select(
+        'SELECT department_id, COUNT(*) AS count FROM employee GROUP BY department_id',
+      );
+      // Convert the result into a List of Maps
+      List<Map<String, dynamic>> counts = [];
+      for (final row in result) {
+        counts.add({
+          'department_id': row['department_id'],
+          'count': row['count'],
+        });
+      }
+      return counts;
+    } catch (e) {
+      log('Get Employee Count by Department Failed: $e');
+      return [];
+    }
+  }
+
+  int getEmployeeCountForDepartment(int departmentId) {
+    try {
+      final result = _db.select(
+        'SELECT COUNT(*) AS count FROM employee WHERE department_id = ?',
+        [departmentId],
+      );
+      if (result.isNotEmpty) {
+        return result.first['count'] as int;
+      } else {
+        return 0;
+      }
+    } catch (e) {
+      log('Get Employee Count for Department Failed: $e');
+      return 0;
+    }
+  }
+
   // ===================== EMPLOYEE CRUD =====================
 
   bool insertEmployee({
