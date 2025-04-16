@@ -168,7 +168,7 @@ class _AddProjectPageState extends State<AddProjectPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_projectNameController.text.isEmpty ||
                         _descriptionController.text.isEmpty ||
                         _status == null ||
@@ -203,7 +203,8 @@ class _AddProjectPageState extends State<AddProjectPage> {
                         estimatedCost: double.tryParse(_estimateCostController.text),
                       );
 
-                      AddAnother(context, "Project", [_projectNameController,_descriptionController,_estimateCostController]);
+                      bool confirm = await AddAnother(context, "Project", [_projectNameController,_descriptionController,_estimateCostController]);
+                      if (confirm==false) {Navigator.pop(context,'refresh');};
                     }
                     print('Project Name: ${_projectNameController.text}');
                     print('Description: ${_descriptionController.text}');
@@ -314,20 +315,19 @@ class _ProjectListPageState extends State<ProjectListPage> {
                             content: Text('Do you really want to delete ${project['project_name']}?'),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('No'),
-                              ),
-                              TextButton(
                                 onPressed: () => Navigator.pop(context, true),
                                 child: Text('Yes'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text('No'),
                               ),
                             ],
                           ),
                         );
 
                         if (confirm == true) {
-                          await DatabaseHelper().deleteHQ(project['id']);
-
+                          await DatabaseHelper().deleteProject(project['id']);
                           setState(() {});
                         }
                       },
@@ -340,8 +340,11 @@ class _ProjectListPageState extends State<ProjectListPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => AddProjectPage()));
+        onPressed: () async {
+          String result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddProjectPage()));
+          if(result=='refresh') {
+            setState(() {});
+          }
         },
         child: Icon(Icons.add),
       ),

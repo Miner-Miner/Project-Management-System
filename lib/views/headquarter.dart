@@ -116,12 +116,12 @@ class _HQListPageState extends State<HQListPage> {
                             content: Text('Do you really want to delete ${hq['location']}?'),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('No'),
-                              ),
-                              TextButton(
                                 onPressed: () => Navigator.pop(context, true),
                                 child: Text('Yes'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text('No'),
                               ),
                             ],
                           ),
@@ -133,7 +133,6 @@ class _HQListPageState extends State<HQListPage> {
                         }
                       },
                     ),
-
                   ],
                 )),
               ]);

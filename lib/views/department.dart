@@ -210,19 +210,19 @@ class _DepartmentListPageState extends State<DepartmentListPage> {
                             content: Text('Do you really want to delete ${dept['department_name']}?'),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('No'),
-                              ),
-                              TextButton(
                                 onPressed: () => Navigator.pop(context, true),
                                 child: Text('Yes'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text('No'),
                               ),
                             ],
                           ),
                         );
 
                         if (confirm == true) {
-                          await DatabaseHelper().deleteHQ(dept['id']);
+                          await DatabaseHelper().deleteDepartment(dept['id']);
                           setState(() {});
                         }
                       },
@@ -235,8 +235,13 @@ class _DepartmentListPageState extends State<DepartmentListPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => AddDepartmentPage()));
+        onPressed: () async{
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDepartmentPage()));
+          if (result == 'refresh'){
+            setState(() {
+              // update UI
+            });
+          }
         },
         child: Icon(Icons.add),
       ),
