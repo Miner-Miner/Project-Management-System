@@ -56,6 +56,7 @@ class DatabaseHelper {
     _db.execute('''
       CREATE TABLE IF NOT EXISTS employee (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hq_id INTEGER NOT NULL,
         full_name TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         phone_number TEXT,
@@ -64,6 +65,7 @@ class DatabaseHelper {
         position TEXT NOT NULL,
         skill TEXT,
         hire_date TEXT,
+        FOREIGN KEY (hq_id) REFERENCES hq(id) ON DELETE CASCADE,
         FOREIGN KEY (department_id) REFERENCES department(id) ON DELETE CASCADE
       );
     ''');
@@ -107,7 +109,6 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         description TEXT,
         cost REAL NOT NULL,
-        date TEXT NOT NULL,
         FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
       );
     ''');
@@ -228,6 +229,27 @@ class DatabaseHelper {
       return false;
     }
   }
+  
+  List<Map<String, dynamic>> getDepartmentsByHq(int hqId) {
+    final List<Map<String, dynamic>> departments = [];
+    try {
+      // Use your low‑level select API
+      final result = _db.select(
+        'SELECT id, department_name, department_head_name, hq_id '
+        'FROM department WHERE hq_id = ?',
+        [hqId],
+      );
+
+      // Convert each Row into a Map<String, dynamic>
+      final columnNames = result.columnNames;
+      for (final row in result) {
+        departments.add(_rowToMap(row, columnNames));
+      }
+    } catch (e) {
+      log('Get Departments by HQ Failed: $e');
+    }
+    return departments;
+  }
 
   // ===================== DEPARTMENT CRUD =====================
 
@@ -338,6 +360,7 @@ class DatabaseHelper {
     required String email,
     String? phoneNumber,
     String? address,
+    required int hqId,
     required int departmentId,
     required String position,
     String? skill,
@@ -345,9 +368,9 @@ class DatabaseHelper {
   }) {
     try {
       _db.execute('''
-        INSERT INTO employee (full_name, email, phone_number, address, department_id, position, skill, hire_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ''', [fullName, email, phoneNumber, address, departmentId, position, skill, hireDate]);
+        INSERT INTO employee (hq_id,full_name, email, phone_number, address, department_id, position, skill, hire_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ''', [hqId, fullName, email, phoneNumber, address, departmentId, position, skill, hireDate]);
       return true;
     } catch (e) {
       log('Insert Employee Failed: $e');
@@ -375,6 +398,7 @@ class DatabaseHelper {
     String? email,
     String? phoneNumber,
     String? address,
+    int? hqId,
     int? departmentId,
     String? position,
     String? skill,
@@ -398,6 +422,10 @@ class DatabaseHelper {
       if (address != null) {
         fields.add('address = ?');
         values.add(address);
+      }
+      if (hqId != null) {
+        fields.add('hq_id = ?');
+        values.add(hqId);
       }
       if (departmentId != null) {
         fields.add('department_id = ?');
