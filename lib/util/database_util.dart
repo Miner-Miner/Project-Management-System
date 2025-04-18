@@ -71,6 +71,7 @@ class DatabaseHelper {
     ''');
 
     // Create Project Table
+    // estimated_cost is planned value (PV)
     _db.execute('''
       CREATE TABLE IF NOT EXISTS project (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,6 +87,7 @@ class DatabaseHelper {
     ''');
 
     // Create Task Table
+    // budget is “baseline” for EV
     _db.execute('''
       CREATE TABLE IF NOT EXISTS task (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,14 +96,17 @@ class DatabaseHelper {
         project_id INTEGER NOT NULL,
         assigned_to INTEGER,
         priority TEXT,
+        status TEXT,
         task_start_date TEXT,
         task_end_date TEXT,
+        budget           REAL    NOT NULL DEFAULT 0.0,
         FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
         FOREIGN KEY (assigned_to) REFERENCES employee(id) ON DELETE CASCADE
       );
     ''');
 
     // Create Project Data Table
+    // cost is actual‐cost line items (AC)
     _db.execute('''
       CREATE TABLE IF NOT EXISTS data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -468,17 +473,19 @@ class DatabaseHelper {
   bool insertTask({
     required String taskTitle,
     String? description,
+    required double budget,
     required int projectId,
     int? assignedTo,
     String? priority,
+    String? status,
     String? taskStartDate,
     String? taskEndDate,
   }) {
     try {
       _db.execute('''
-        INSERT INTO task (task_title, description, project_id, assigned_to, priority, task_start_date, task_end_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      ''', [taskTitle, description, projectId, assignedTo, priority, taskStartDate, taskEndDate]);
+        INSERT INTO task (task_title, description, budget, project_id, assigned_to, priority, status, task_start_date, task_end_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ''', [taskTitle, description, budget, projectId, assignedTo, priority, status, taskStartDate, taskEndDate]);
       return true;
     } catch (e) {
       log('Insert Task Failed: $e');
@@ -504,9 +511,11 @@ class DatabaseHelper {
     int id, {
     String? taskTitle,
     String? description,
+    double? budget,
     int? projectId,
     int? assignedTo,
     String? priority,
+    String? status,
     String? taskStartDate,
     String? taskEndDate,
   }) {
@@ -521,6 +530,10 @@ class DatabaseHelper {
         fields.add('description = ?');
         values.add(description);
       }
+      if (budget != null) {
+        fields.add('budget = ?');
+        values.add(budget);
+      }
       if (projectId != null) {
         fields.add('project_id = ?');
         values.add(projectId);
@@ -532,6 +545,10 @@ class DatabaseHelper {
       if (priority != null) {
         fields.add('priority = ?');
         values.add(priority);
+      }
+      if (status != null) {
+        fields.add('status = ?');
+        values.add(status);
       }
       if (taskStartDate != null) {
         fields.add('task_start_date = ?');
@@ -557,6 +574,30 @@ class DatabaseHelper {
       return true;
     } catch (e) {
       log('Delete Task Failed: $e');
+      return false;
+    }
+  }
+
+  bool updateTaskStatus(int id, String status){
+    try{
+      _db.execute("UPDATE task SET status = ? WHERE id = ?",[status, id]);
+      log('success');
+      return true;
+    }
+    catch(e){
+      log(e.toString());
+      return false;
+    }
+  }
+
+  bool updateTaskPriority(int id, String priority){
+    try{
+      _db.execute("UPDATE task SET priority = ? WHERE id = ?",[priority, id]);
+      log('success');
+      return true;
+    }
+    catch(e){
+      log(e.toString());
       return false;
     }
   }
@@ -659,6 +700,97 @@ class DatabaseHelper {
     }
   }
 
+  List<Map<String, dynamic>> getEmployeesByProject(int projectId) {
+    final List<Map<String, dynamic>> employees = [];
+    try {
+      final result = _db.select(
+        '''
+        SELECT 
+          e.id,
+          e.hq_id,
+          e.full_name,
+          e.email,
+          e.phone_number,
+          e.address,
+          e.department_id,
+          e.position,
+          e.skill,
+          e.hire_date
+        FROM project   AS p
+        JOIN hq        AS h ON p.hq_id         = h.id
+        JOIN department AS d ON d.hq_id        = h.id
+        JOIN employee  AS e ON e.department_id = d.id
+        WHERE p.id = ?
+        ''',
+        [projectId],
+      );
+      final columnNames = result.columnNames;
+      for (final row in result) {
+        employees.add(_rowToMap(row, columnNames));
+      }
+    } catch (e) {
+      log('Get Employees By Project Failed: $e');
+    }
+    return employees;
+  }
+
+  /// Returns all data rows for a given project_id
+  Future<List<Map<String, dynamic>>> getProjectDataByProject(int projectId) async {
+    final List<Map<String, dynamic>> dataList = [];
+    try {
+      final result = _db.select(
+        '''
+        SELECT id,
+              project_id,
+              date,
+              description,
+              cost
+          FROM data
+        WHERE project_id = ?
+        ORDER BY date DESC
+        ''',
+        [projectId],
+      );
+      final columnNames = result.columnNames;
+      for (final row in result) {
+        dataList.add(_rowToMap(row, columnNames));
+      }
+    } catch (e) {
+      log('getProjectDataByProject failed: $e');
+    }
+    return dataList;
+  }
+
+  /// Returns all tasks for a given project_id
+  Future<List<Map<String, dynamic>>> getTasksByProject(int projectId) async {
+    final List<Map<String, dynamic>> taskList = [];
+    try {
+      final result = _db.select(
+        '''
+        SELECT id,
+              task_title,
+              description,
+              project_id,
+              assigned_to,
+              priority,
+              task_start_date,
+              task_end_date
+          FROM task
+        WHERE project_id = ?
+        ORDER BY task_start_date ASC
+        ''',
+        [projectId],
+      );
+      final columnNames = result.columnNames;
+      for (final row in result) {
+        taskList.add(_rowToMap(row, columnNames));
+      }
+    } catch (e) {
+      log('getTasksByProject failed: $e');
+    }
+    return taskList;
+  }
+
   // ===================== DATA CRUD =====================
 
   bool insertData({
@@ -739,6 +871,33 @@ class DatabaseHelper {
     }
   }
 
+  List<Map<String, dynamic>> getAllDataWhere(int? projectId) {
+    final List<Map<String, dynamic>> dataList = [];
+    if(projectId == null){
+      try {
+        final result = _db.select('SELECT * FROM data ORDER BY date ASC');
+        final columnNames = result.columnNames;
+        for (final row in result) {
+          dataList.add(_rowToMap(row,columnNames));
+        }
+      } catch (e) {
+        log('Get Data Failed: $e');
+      }
+    }
+    else {
+      try {
+        final result = _db.select('SELECT * FROM data WHERE project_id = $projectId');
+        final columnNames = result.columnNames;
+        for (final row in result) {
+          dataList.add(_rowToMap(row,columnNames));
+        }
+      } catch (e) {
+        log('Get Data Failed: $e');
+      }
+    }
+    return dataList;
+  }
+
   // ===================== GENERIC HELPER FUNCTIONS =====================
 
   /// Checks if there is at least one record in the given table.
@@ -815,9 +974,209 @@ class DatabaseHelper {
     }
   }
 
+  // ===================== PV EV AC CV SV CVI SVI =====================
+
+    List<Map<String, dynamic>> getPlannedValueByMonth(int projectId) {
+    // Debug: print the raw rows so you can see what months come back:
+    final result = _db.select('''
+      SELECT
+        strftime('%Y-%m', task_start_date) AS month,
+        SUM(budget)                       AS pv
+      FROM task
+      WHERE project_id = ?
+        AND task_start_date IS NOT NULL
+      GROUP BY month
+      ORDER BY month
+    ''', [projectId]);
+
+    log('PV rows:');
+    for (final row in result) {
+      log(row.toString());
+    }
+
+    return result.map((row) => {
+      'month': row['month'] as String,
+      'pv':    (row['pv']    as num).toDouble(),
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> getEarnedValueByMonth(int projectId) {
+    // Debug: print the raw rows so you can see what months come back:
+    final result = _db.select('''
+      SELECT
+        strftime('%Y-%m', task_end_date) AS month,
+        SUM(budget)                       AS ev
+      FROM task
+      WHERE project_id = ?
+        AND task_end_date IS NOT NULL
+        AND UPPER(status) = UPPER('Completed')
+      GROUP BY month
+      ORDER BY month
+    ''', [projectId]);
+
+    log('EV rows:');
+    for (final row in result) {
+      log(row.toString());
+    }
+
+    return result.map((row) => {
+      'month': row['month'] as String,
+      'ev':    (row['ev']    as num).toDouble(),
+    }).toList();
+  }
+
+  /// Returns list of { month: 'YYYY‑MM', av: totalCost } for a project
+  List<Map<String, dynamic>> getActualCostByMonth(int projectId) {
+    final result = _db.select('''
+      SELECT substr(date,1,7) AS month,
+             SUM(cost)       AS av
+      FROM data
+      WHERE project_id = ?
+      GROUP BY month
+      ORDER BY month ASC
+    ''', [projectId]);
+
+    return result.map((row) {
+      return {
+        'month': row['month'] as String,
+        'av':    (row['av']    as num).toDouble(),
+      };
+    }).toList();
+  }
+
+  /// Combines PV, EV, AV per month and computes CV, SV, CVI, SVI
+  List<ProjectMonthlyMetrics> getMonthlyMetrics(int projectId) {
+    // Fetch the three series
+    final pvList = getPlannedValueByMonth(projectId);
+    final evList = getEarnedValueByMonth(projectId);
+    final avList = getActualCostByMonth(projectId);
+
+    // Build a map of month -> metrics
+    final Map<String, ProjectMonthlyMetrics> map = {};
+
+    void _ensureMonth(String month) {
+      if (!map.containsKey(month)) {
+        map[month] = ProjectMonthlyMetrics(
+          month: month,
+          ac:    0.0, pv: 0.0, ev: 0.0,
+          cv:    0.0, sv: 0.0,
+          cvi:   0.0, svi: 0.0,
+        );
+      }
+    }
+
+    for (var e in pvList) {
+      final m = e['month'] as String;
+      _ensureMonth(m);
+      map[m] = ProjectMonthlyMetrics.fromMap({
+        'month': m,
+        'pv':    e['pv'],
+        'ev':    map[m]!.ev,
+        'ac':    map[m]!.ac,
+        'cv':    0.0,
+        'sv':    0.0,
+        'cvi':   0.0,
+        'svi':   0.0,
+      });
+    }
+
+    for (var e in evList) {
+      final m = e['month'] as String;
+      _ensureMonth(m);
+      final existing = map[m]!;
+      map[m] = ProjectMonthlyMetrics.fromMap({
+        'month': m,
+        'pv':    existing.pv,
+        'ev':    e['ev'],
+        'ac':    existing.ac,
+        'cv':    0.0,
+        'sv':    0.0,
+        'cvi':   0.0,
+        'svi':   0.0,
+      });
+    }
+
+    for (var e in avList) {
+      final m = e['month'] as String;
+      _ensureMonth(m);
+      final existing = map[m]!;
+      map[m] = ProjectMonthlyMetrics.fromMap({
+        'month': m,
+        'pv':    existing.pv,
+        'ev':    existing.ev,
+        'ac':    e['av'],
+        'cv':    0.0,
+        'sv':    0.0,
+        'cvi':   0.0,
+        'svi':   0.0,
+      });
+    }
+
+    // Now compute variances & indices
+    for (var entry in map.entries) {
+      final pm = entry.value;
+      final cv  = pm.ev - pm.ac;
+      final sv  = pm.ev - pm.pv;
+      final cvi = pm.ac != 0.0 ? pm.ev / pm.ac : 0.0;
+      final svi = pm.pv != 0.0 ? pm.ev / pm.pv : 0.0;
+
+      map[entry.key] = ProjectMonthlyMetrics(
+        month: pm.month,
+        ac:    pm.ac,
+        pv:    pm.pv,
+        ev:    pm.ev,
+        cv:    cv,
+        sv:    sv,
+        cvi:   cvi,
+        svi:   svi,
+      );
+    }
+
+    // Return sorted by month
+    final months = map.keys.toList()..sort();
+    return months.map((m) => map[m]!).toList();
+  }
+
+
   // ===================== CLOSE DATABASE =====================
 
   void close() {
     _db.dispose();
+  }
+}
+
+class ProjectMonthlyMetrics {
+  final String month;
+  final double ac;   // Actual Cost
+  final double pv;   // Planned Value
+  final double ev;   // Earned Value
+  final double cv;   // Cost Variance (EV – AC)
+  final double sv;   // Schedule Variance (EV – PV)
+  final double cvi;  // Cost Variance Index (EV / AC)
+  final double svi;  // Schedule Variance Index (EV / PV)
+
+  ProjectMonthlyMetrics({
+    required this.month,
+    required this.ac,
+    required this.pv,
+    required this.ev,
+    required this.cv,
+    required this.sv,
+    required this.cvi,
+    required this.svi,
+  });
+
+  factory ProjectMonthlyMetrics.fromMap(Map<String, dynamic> m) {
+    double toD(dynamic x) => (x as num?)?.toDouble() ?? 0.0;
+    return ProjectMonthlyMetrics(
+      month: m['month'] as String? ?? '',
+      ac:    toD(m['ac']),
+      pv:    toD(m['pv']),
+      ev:    toD(m['ev']),
+      cv:    toD(m['cv']),
+      sv:    toD(m['sv']),
+      cvi:   toD(m['cvi']),
+      svi:   toD(m['svi']),
+    );
   }
 }

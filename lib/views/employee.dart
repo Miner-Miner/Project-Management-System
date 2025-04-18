@@ -230,97 +230,100 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   int no = 0;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    no = 0;
     return Scaffold(
       body: SizedBox(
         width: MediaQuery.sizeOf(context).width,
         height: MediaQuery.sizeOf(context).height,
         child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: DataTable(
-            columns: [
-              DataColumn(label: Text('No')),
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Email')),
-              DataColumn(label: Text('Phone')),
-              DataColumn(label: Text('Address')),
-              DataColumn(label: Text('Headquarter')),
-              DataColumn(label: Text('Department')),
-              DataColumn(label: Text('Position')),
-              DataColumn(label: Text('Skill')),
-              DataColumn(label: Text('Hire Date')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: DatabaseHelper().getAllEmployees().map((emp) {
-              no++;
-              return DataRow(cells: [
-                DataCell(Text(no.toString())),
-                DataCell(Text(emp['full_name'])),
-                DataCell(Text(emp['email'])),
-                DataCell(Text(emp['phone_number'])),
-                DataCell(Text(emp['address'])),
-                DataCell(Text(emp['hq_id'].toString())),
-                DataCell(Text(emp['department_id'].toString())),
-                DataCell(Text(emp['position'])),
-                DataCell(Text(emp['skill'])),
-                DataCell(Text(emp['hire_date'])),
-                DataCell(Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () async {
-                        String result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditEmployeePage(emp['id'])));
-                        if(result=='refresh'){
-                          setState(() {
-                          });
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text('Delete Confirmation'),
-                            content: Text('Do you really want to delete ${emp['full_name']}?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text('Yes'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('No'),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (confirm == true) {
-                          DatabaseHelper().deleteEmployee(emp['id']);
-                          setState(() {});
-                        }
-                      },
-                    ),
-                  ],
-                )),
-              ]);
-            }).toList(),
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: DataTable(
+              columns: [
+                DataColumn(label: Text('No')),
+                DataColumn(label: Text('Name')),
+                DataColumn(label: Text('Email')),
+                DataColumn(label: Text('Phone')),
+                DataColumn(label: Text('Address')),
+                DataColumn(label: Text('Headquarter')),
+                DataColumn(label: Text('Department')),
+                DataColumn(label: Text('Position')),
+                DataColumn(label: Text('Skill')),
+                DataColumn(label: Text('Hire Date')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: DatabaseHelper().getAllEmployees().map((emp) {
+                no++;
+                return DataRow(cells: [
+                  DataCell(Text(no.toString())),
+                  DataCell(Text(emp['full_name'] ?? '-')),
+                  DataCell(Text(emp['email'] ?? '-')),
+                  DataCell(Text(emp['phone_number'] ?? '-')),
+                  DataCell(Text(emp['address'] ?? '-')),
+                  DataCell(Text(emp['hq_id'].toString())),
+                  DataCell(Text(emp['department_id'].toString())),
+                  DataCell(Text(emp['position'] ?? '-')),
+                  DataCell(Text(emp['skill'] ?? '-')),
+                  DataCell(Text(emp['hire_date'] ?? '-')),
+                  DataCell(Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () async {
+                          String result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => EditEmployeePage(emp['id'])),
+                          );
+                          if (result == 'refresh') {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Delete Confirmation'),
+                              content: Text('Do you really want to delete ${emp['full_name']}?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: Text('Yes'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: Text('No'),
+                                ),
+                              ],
+                            ),
+                          );
+          
+                          if (confirm == true) {
+                            DatabaseHelper().deleteEmployee(emp['id']);
+                            setState(() {});
+                          }
+                        },
+                      ),
+                    ],
+                  )),
+                ]);
+              }).toList(),
+            ),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          String result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddEmployeePage()));
-          if(result=='refresh'){
-            setState(() {
-            });
+          String result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AddEmployeePage()),
+          );
+          if (result == 'refresh') {
+            setState(() {});
           }
         },
         child: Icon(Icons.add),
@@ -328,6 +331,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     );
   }
 }
+
 
 class EditEmployeePage extends StatefulWidget {
   final int id;
@@ -512,45 +516,45 @@ class _EditEmployeePageState extends State<EditEmployeePage> {
     if (!_formKey.currentState!.validate()) return;
 
     // Ask for confirmation
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text("Do you want to update?"),
-          content: Text("Are you sure you want to update to ${_nameController.text}?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text("Yes"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text("No")
-            ),
-          ],
-        ),
-      );
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Do you want to update?"),
+        content: Text("Are you sure you want to update to ${_nameController.text}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text("Yes"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text("No")
+          ),
+        ],
+      ),
+    );
 
-      if (confirm == true) {
-        // Update department in the database
-        
-        DatabaseHelper().updateEmployee(
-          id,
-          fullName: _nameController.text,
-          email: _emailController.text,
-          phoneNumber: _phoneController.text,
-          address: _addressController.text,
-          hqId: _selectedHqId!,
-          departmentId: _selectedDeptId!,
-          position: _positionController.text,
-          skill: _skillController.text,
-          hireDate: _hireDate,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Department changed successfully')),
-        );
-        // Finally pop the edit page with a result
-        Navigator.pop(context, 'refresh');
-      }
+    if (confirm == true) {
+      // Update department in the database
+      
+      DatabaseHelper().updateEmployee(
+        id,
+        fullName: _nameController.text,
+        email: _emailController.text,
+        phoneNumber: _phoneController.text,
+        address: _addressController.text,
+        hqId: _selectedHqId!,
+        departmentId: _selectedDeptId!,
+        position: _positionController.text,
+        skill: _skillController.text,
+        hireDate: _hireDate,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Department changed successfully')),
+      );
+      // Finally pop the edit page with a result
+      Navigator.pop(context, 'refresh');
+    }
   }
 
   @override

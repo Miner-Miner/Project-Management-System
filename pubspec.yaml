@@ -42,6 +42,9 @@ dependencies:
 
   # Crypto Dependencies for Password Hashing
   crypto: ^3.0.3
+  syncfusion_flutter_charts: ^29.1.38
+  interactive_gantt_chart: ^0.1.4
+  pie_chart: ^5.4.0
 
 dev_dependencies:
   flutter_test:
