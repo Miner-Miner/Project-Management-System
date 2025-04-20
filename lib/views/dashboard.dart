@@ -38,15 +38,15 @@ class _DashboardPageState extends State<DashboardPage> {
     if (sel.isEmpty) return;
 
     final projectId = sel['id'] as int;
-    final pieData   = await _getPieChartData(projectId);
+    final pieData = await _getPieChartData(projectId);
     final taskStats = await _getTaskCompletionGraph(projectId);
     final ganttData = await _getGanttData(projectId);
 
     setState(() {
       _selectedProjectId = projectId;
-      _pieData    = pieData;
-      _taskStats  = taskStats;
-      _ganttData  = ganttData;
+      _pieData = pieData;
+      _taskStats = taskStats;
+      _ganttData = ganttData;
     });
   }
 
@@ -62,6 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     return data;
   }
+
   /// 1. Count tasks by status (pending, doing, done, complete)
   Future<Map<String, int>> _getTaskCompletionGraph(int projectId) async {
     final rows = await DatabaseHelper().getTasksByProject(projectId);
@@ -69,19 +70,27 @@ class _DashboardPageState extends State<DashboardPage> {
     // Initialize counts for each status (capitalized for friendly labels)
     final Map<String, int> stats = {
       'Pending': 0,
-      'Doing':   0,
-      'Done':    0,
-      'Complete':0,
+      'Doing': 0,
+      'Done': 0,
+      'Complete': 0,
     };
 
     for (var t in rows) {
-      final raw = (t['status'] as String?)?.trim().toLowerCase() ?? 'pending';
-      final key = raw[0].toUpperCase() + raw.substring(1); 
-      if (stats.containsKey(key)) {
-        stats[key] = stats[key]! + 1;
+      // Log raw status for debugging
+      log('Task status: "${t['status']}"');
+
+      final rawStatus = (t['status'] as String?)?.trim();
+      if (rawStatus == null || rawStatus.isEmpty) {
+        stats['Pending'] = stats['Pending']! + 1;
       } else {
-        // in case you ever get an unexpected status
-        stats[key] = 1;
+        final formatted = rawStatus.toLowerCase();
+        final key = formatted[0].toUpperCase() + formatted.substring(1);
+        if (stats.containsKey(key)) {
+          stats[key] = stats[key]! + 1;
+        } else {
+          // in case you get an unexpected status
+          stats[key] = 1;
+        }
       }
     }
 
@@ -91,62 +100,72 @@ class _DashboardPageState extends State<DashboardPage> {
   /// 2. New helper to pick a color per status
   Color _colorForStatus(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':  return Colors.orange;
-      case 'doing':    return Colors.blueAccent;
-      case 'done':     return Colors.green;
-      case 'complete': return Colors.teal;
-      default:         return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'doing':
+        return Colors.blueAccent;
+      case 'done':
+        return Colors.green;
+      case 'complete':
+        return Colors.teal;
+      default:
+        return Colors.grey;
     }
-}
+  }
 
-/// 3. Updated bar chart builder to use the status‑counts + colors
-Widget _buildBarChart() {
-  if (_taskStats.isEmpty) 
-    return Center(child: Text('No tasks to display'));
+  /// 3. Updated bar chart builder to use the status‑counts + colors
+  Widget _buildBarChart() {
+    if (_taskStats.isEmpty) return Center(child: Text('No tasks to display'));
 
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final maxCount = _taskStats.values.fold<int>(0, (p, v) => v > p ? v : p);
-      final availableHeight = constraints.maxHeight - 48;
-      final factor = maxCount > 0 ? availableHeight / maxCount : 0;
-      const barWidth = 40.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxCount =
+            _taskStats.values.fold<int>(0, (p, v) => v > p ? v : p);
+        final availableHeight = constraints.maxHeight - 48;
+        final factor = maxCount > 0 ? availableHeight / maxCount : 0;
+        const barWidth = 40.0;
 
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: _taskStats.entries.map((e) {
-          final barHeight = e.value * factor;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text('${e.value}', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 4),
-              Container(
-                width: barWidth,
-                height: barHeight.toDouble(),
-                color: _colorForStatus(e.key),
-              ),
-              SizedBox(height: 4),
-              Text(e.key),
-            ],
-          );
-        }).toList(),
-      );
-    },
-  );
-}
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: _taskStats.entries.map((e) {
+            final barHeight = e.value * factor;
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text('${e.value}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 4),
+                Container(
+                  width: barWidth,
+                  height: barHeight.toDouble(),
+                  color: _colorForStatus(e.key),
+                ),
+                SizedBox(height: 4),
+                Text(e.key),
+              ],
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
 
   Future<List<Map<String, dynamic>>> _getGanttData(int projectId) async {
     final rows = await DatabaseHelper().getTasksByProject(projectId);
     return rows.map((t) {
-      final start    = DateTime.tryParse(t['task_start_date'] as String? ?? '') ?? DateTime.now();
-      final end      = DateTime.tryParse(t['task_end_date']   as String? ?? '') ?? start;
-      final title    = (t['task_title'] as String?) ?? '';
-      final priority = (t['priority']   as String?) ?? 'Unknown';
+      final start = DateTime.tryParse(
+              t['task_start_date'] as String? ?? '') ??
+          DateTime.now();
+      final end = DateTime.tryParse(
+              t['task_end_date'] as String? ?? '') ??
+          start;
+      final title = (t['task_title'] as String?) ?? '';
+      final priority = (t['priority'] as String?) ?? 'Unknown';
       return {
-        'title':    title,
-        'start':    start,
-        'end':      end,
+        'title': title,
+        'start': start,
+        'end': end,
         'priority': priority,
       };
     }).toList();
@@ -154,10 +173,14 @@ Widget _buildBarChart() {
 
   Color _colorForPriority(String p) {
     switch (p.toLowerCase()) {
-      case 'high':   return Colors.red;
-      case 'medium': return Colors.orange;
-      case 'low':    return Colors.green;
-      default:       return Colors.blueAccent;
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.blueAccent;
     }
   }
 
@@ -207,9 +230,9 @@ Widget _buildBarChart() {
 
     final tasks = _ganttData.map((t) {
       return {
-        'title':    t['title'] as String,
-        'start':    t['start'] as DateTime,
-        'end':      t['end']   as DateTime,
+        'title': t['title'] as String,
+        'start': t['start'] as DateTime,
+        'end': t['end'] as DateTime,
         'priority': t['priority'] as String,
       };
     }).toList();
@@ -218,7 +241,7 @@ Widget _buildBarChart() {
         .expand((t) => [t['start'] as DateTime, t['end'] as DateTime])
         .toList();
     final minD = allDates.reduce((a, b) => a.isBefore(b) ? a : b);
-    final maxD = allDates.reduce((a, b) => a.isAfter(b)  ? a : b);
+    final maxD = allDates.reduce((a, b) => a.isAfter(b) ? a : b);
     final days = maxD.difference(minD).inDays + 1;
     const dayW = 60.0; // width per day
 
@@ -254,12 +277,12 @@ Widget _buildBarChart() {
 
                 // Task bars
                 ...tasks.map((t) {
-                  final start    = t['start'] as DateTime;
-                  final end      = t['end']   as DateTime;
-                  final title    = t['title'] as String;
+                  final start = t['start'] as DateTime;
+                  final end = t['end'] as DateTime;
+                  final title = t['title'] as String;
                   final priority = t['priority'] as String;
-                  final offset   = start.difference(minD).inDays;
-                  final length   = end.difference(start).inDays + 1;
+                  final offset = start.difference(minD).inDays;
+                  final length = end.difference(start).inDays + 1;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -328,7 +351,7 @@ Widget _buildBarChart() {
                 context,
                 MaterialPageRoute(
                   builder: (_) => DashboardProjectDataPage(_selectedProjectId!),
-                )
+                ),
               );
             },
             child: Text('Project Progress (Cost Breakdown)',
@@ -341,7 +364,7 @@ Widget _buildBarChart() {
                 context,
                 MaterialPageRoute(
                   builder: (_) => DashboardProjectDataPage(_selectedProjectId!),
-                )
+                ),
               );
             },
             child: Container(
@@ -398,7 +421,7 @@ class DashboardProjectDataPage extends StatefulWidget {
 class _DashboardProjectDataPageState extends State<DashboardProjectDataPage> {
   final int id;
   _DashboardProjectDataPageState(this.id);
-  
+
   List<ProjectMonthlyMetrics> performanceData = [];
 
   @override
@@ -419,9 +442,9 @@ class _DashboardProjectDataPageState extends State<DashboardProjectDataPage> {
           child: (performanceData.isEmpty || id == -1)
               ? Center(child: Text('No data'))
               : SizedBox(
-                width: MediaQuery.sizeOf(context).width,
-                height: MediaQuery.sizeOf(context).height,
-                child: SingleChildScrollView(
+                  width: MediaQuery.sizeOf(context).width,
+                  height: MediaQuery.sizeOf(context).height,
+                  child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: const [
@@ -448,13 +471,9 @@ class _DashboardProjectDataPageState extends State<DashboardProjectDataPage> {
                       }).toList(),
                     ),
                   ),
-              ),
+                ),
         ),
       ),
     );
   }
 }
-
-
-
-

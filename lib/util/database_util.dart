@@ -767,14 +767,7 @@ class DatabaseHelper {
     try {
       final result = _db.select(
         '''
-        SELECT id,
-              task_title,
-              description,
-              project_id,
-              assigned_to,
-              priority,
-              task_start_date,
-              task_end_date
+        SELECT *
           FROM task
         WHERE project_id = ?
         ORDER BY task_start_date ASC
