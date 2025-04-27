@@ -4,7 +4,7 @@ Future<bool> AddAnother(BuildContext context, String title, List<dynamic> views)
   bool ret = await showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Add HQ'),
+      title: Text('Add $title'),
       content: Text('Do you want to add another $title?'),
       actions: [
         TextButton(

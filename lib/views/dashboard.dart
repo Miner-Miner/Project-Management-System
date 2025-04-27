@@ -30,24 +30,24 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _onProjectSelected(String? projectName) async {
-    if (projectName == null) return;
-    final sel = _projects.firstWhere(
-      (p) => p['project_name'] == projectName,
-      orElse: () => {},
-    );
-    if (sel.isEmpty) return;
+    // if (projectName == null) return;
+    // final sel = _projects.firstWhere(
+    //   (p) => p['project_name'] == projectName,
+    //   orElse: () => {},
+    // );
+    // if (sel.isEmpty) return;
 
-    final projectId = sel['id'] as int;
-    final pieData = await _getPieChartData(projectId);
-    final taskStats = await _getTaskCompletionGraph(projectId);
-    final ganttData = await _getGanttData(projectId);
+    // final projectId = sel['id'] as int;
+    // final pieData = await _getPieChartData(projectId);
+    // final taskStats = await _getTaskCompletionGraph(projectId);
+    // final ganttData = await _getGanttData(projectId);
 
-    setState(() {
-      _selectedProjectId = projectId;
-      _pieData = pieData;
-      _taskStats = taskStats;
-      _ganttData = ganttData;
-    });
+    // setState(() {
+    //   _selectedProjectId = projectId;
+    //   _pieData = pieData;
+    //   _taskStats = taskStats;
+    //   _ganttData = ganttData;
+    // });
   }
 
   Future<Map<String, double>> _getPieChartData(int projectId) async {
@@ -445,7 +445,7 @@ class _DashboardProjectDataPageState extends State<DashboardProjectDataPage> {
                   width: MediaQuery.sizeOf(context).width,
                   height: MediaQuery.sizeOf(context).height,
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+                    scrollDirection: Axis.vertical,
                     child: DataTable(
                       columns: const [
                         DataColumn(label: Text('Month')),
@@ -460,13 +460,13 @@ class _DashboardProjectDataPageState extends State<DashboardProjectDataPage> {
                       rows: performanceData.map((m) {
                         return DataRow(cells: [
                           DataCell(Text(m.month)),
-                          DataCell(Text(m.ac.toStringAsFixed(2))),
-                          DataCell(Text(m.pv.toStringAsFixed(2))),
-                          DataCell(Text(m.ev.toStringAsFixed(2))),
-                          DataCell(Text(m.cv.toStringAsFixed(2))),
-                          DataCell(Text(m.sv.toStringAsFixed(2))),
-                          DataCell(Text(m.cvi.toStringAsFixed(2))),
-                          DataCell(Text(m.svi.toStringAsFixed(2))),
+                          DataCell(Text(m.ac.toStringAsFixed(2)+" MMK")),
+                          DataCell(Text(m.pv.toStringAsFixed(2)+" MMK")),
+                          DataCell(Text(m.ev.toStringAsFixed(2)+" MMK")),
+                          DataCell(Text(m.cv.toStringAsFixed(2)+" MMK")),
+                          DataCell(Text(m.sv.toStringAsFixed(2)+" MMK")),
+                          DataCell(Text((m.cvi*100.00).toStringAsFixed(2)+" %")),
+                          DataCell(Text((m.svi*100.00).toStringAsFixed(2)+" %")),
                         ]);
                       }).toList(),
                     ),
